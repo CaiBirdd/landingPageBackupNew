@@ -1,0 +1,54 @@
+/* 全局重置与基础设置 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 基础字体与平滑处理 */
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  color: #333;
+  background-color: #fff;
+}
+
+/* 图片响应式与去底边 */
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* 表单元素继承字体，方便统一控制 */
+input, button, textarea, select {
+  font: inherit;
+  outline: none;
+}
+
+/* 移除列表默认样式 */
+ul, ol {
+  list-style: none;
+}
+
+/* 链接去除下划线，颜色继承 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 按钮指针 */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* 标题重置 */
+h1, h2, h3, h4, h5, h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
