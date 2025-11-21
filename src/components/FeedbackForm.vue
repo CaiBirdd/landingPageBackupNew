@@ -15,6 +15,10 @@
 import { ref, onUnmounted } from 'vue'
 import { useToast } from "vue-toastification"
 import { createFeedbackAPI } from '../apis/createFeedback'
+import { usePostHog } from '../composables/usePostHog' // 导入 PostHog
+
+// 获取 PostHog 实例
+const { posthog } = usePostHog()
 
 // 获取 toast 消息提示实例
 const toast = useToast()
@@ -49,23 +53,56 @@ const handleSubmit = () => {
 
   //发送请求发数据
   const sendFormdata = async (obj) => {
-    const res = await createFeedbackAPI(obj)
-    console.log(res)
-    if (res.status === 201) {
-      // 使用 Toast 消息提示 提交成功和失败
-      toast.success("感谢您的反馈！")
-    }else{
+    try {
+      const res = await createFeedbackAPI(obj)
+      console.log(res)
+      
+      if (res.status === 201) {
+        // 使用 Toast 消息提示 提交成功
+        toast.success("感谢您的反馈！")
+        
+        // ✅提交成功后，同步发送事件到 PostHog
+        posthog.capture('feedback_submitted', {
+          email: formData.value.email,
+          feedback_content: formData.value.content,
+          device_type: formData.value.device,
+          has_feedback: !!formData.value.content, // 是否填写了反馈
+          feedback_length: formData.value.content.length // 反馈内容长度
+        })
+        // 可选：关联用户邮箱（用于用户识别）
+        posthog.identify(formData.value.email, {
+          email: formData.value.email,
+          last_feedback_time: new Date().toISOString()
+        })
+        
+      } else {
+        toast.warning("提交失败，请检查网络")
+        // ✅ 提交失败时也可以追踪，同步发送事件到 PostHog
+        posthog.capture('feedback_submit_failed', {
+          email: formData.value.email,
+          device_type: formData.value.device,
+          error_status: res.status
+        })
+      }
+    } catch (error) {
       toast.warning("提交失败，请检查网络")
+      
+      // ✅ 捕获错误
+      posthog.capture('feedback_submit_error', {
+        email: formData.value.email,
+        device_type: formData.value.device,
+        error_message: error.message
+      })
     }
   }
+  
   sendFormdata(formData.value)
-
 
   //如果之前有定时器在跑，先清除它
   if (timerId) clearTimeout(timerId)
   // 重置表单
   timerId = setTimeout(() => {
-    formData.value = { email: '', content: '' }
+    formData.value = { email: '', content: '', device: formData.value.device }
     timerId = null
   }, 3000)
 }
