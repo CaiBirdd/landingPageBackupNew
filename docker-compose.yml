@@ -1,0 +1,15 @@
+services:
+  synapnote-landingpage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: synapnote-landingpage
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - synapnote-network
+
+networks:
+  synapnote-network:
+    driver: bridge

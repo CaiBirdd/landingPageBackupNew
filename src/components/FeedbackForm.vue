@@ -15,7 +15,7 @@
 import { ref, onUnmounted } from 'vue'
 import { useToast } from "vue-toastification"
 import { createFeedbackAPI } from '../apis/createFeedback'
-import { usePostHog } from '../composables/usePostHog' // 导入 PostHog
+import { usePostHog } from '../composables/usePosthog' // 导入 PostHog
 
 // 获取 PostHog 实例
 const { posthog } = usePostHog()

@@ -1,0 +1,50 @@
+# 允许 Facebook 爬虫完全访问
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: FacebookBot
+User-agent: facebookcatalog
+User-agent: Facebook-FBCrawler
+Allow: /
+
+# 禁止 Google 系列爬虫
+User-agent: Googlebot
+User-agent: Googlebot-Image
+User-agent: Googlebot-News
+User-agent: Googlebot-Video
+User-agent: Google-InspectionTool
+User-agent: AdsBot-Google
+User-agent: Mediapartners-Google
+Disallow: /
+
+# 禁止 Bing 系列爬虫
+User-agent: bingbot
+User-agent: BingPreview
+User-agent: msnbot
+User-agent: MSNBot-Media
+Disallow: /
+
+# 禁止 Baidu 爬虫
+User-agent: Baiduspider
+User-agent: Baiduspider-video
+User-agent: Baiduspider-image
+Disallow: /
+
+# 禁止 Yandex 爬虫
+User-agent: YandexBot
+User-agent: YandexImages
+Disallow: /
+
+# 禁止其他搜索引擎爬虫
+User-agent: Slurp
+User-agent: DuckDuckBot
+User-agent: Sogou
+User-agent: 360Spider
+User-agent: SemrushBot
+User-agent: AhrefsBot
+User-agent: MJ12bot
+User-agent: DotBot
+Disallow: /
+
+# 默认规则：禁止所有其他爬虫
+User-agent: *
+Disallow: /
