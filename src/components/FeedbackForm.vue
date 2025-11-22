@@ -16,9 +16,12 @@ import { ref, onUnmounted } from 'vue'
 import { useToast } from "vue-toastification"
 import { createFeedbackAPI } from '../apis/createFeedback'
 import { usePostHog } from '../composables/usePosthog' // 导入 PostHog
+import { useFbPixel } from '../composables/useFbPixel' // 导入 Facebook Pixel
 
 // 获取 PostHog 实例
 const { posthog } = usePostHog()
+// 获取 Facebook Pixel 实例
+const { trackLead } = useFbPixel()
 
 // 获取 toast 消息提示实例
 const toast = useToast()
@@ -60,7 +63,7 @@ const handleSubmit = () => {
       if (res.status === 201) {
         // 使用 Toast 消息提示 提交成功
         toast.success("感谢您的反馈！")
-        
+
         // ✅提交成功后，同步发送事件到 PostHog
         posthog.capture('feedback_submitted', {
           email: formData.value.email,
@@ -74,7 +77,15 @@ const handleSubmit = () => {
           email: formData.value.email,
           last_feedback_time: new Date().toISOString()
         })
-        
+
+        // ✅ 提交成功后，同步发送事件到 Facebook Pixel
+        trackLead({
+          content_name: 'Feedback Submission',
+          content_category: 'Lead',
+          value: 1.00,
+          currency: 'USD'
+        })
+
       } else {
         toast.warning("提交失败，请检查网络")
         // ✅ 提交失败时也可以追踪，同步发送事件到 PostHog
