@@ -1,0 +1,332 @@
+stages:
+  - test          # 运行测试
+  - build         # 构建Docker镜像
+  - deploy        # 部署服务
+  - rollback      # 回滚服务
+
+# 运行测试（如果有测试用例）
+test:
+  stage: test
+  # image: python:3.9
+  # before_script:
+  script:
+    # 这里可以添加实际的测试命令
+    # 例如: pytest app/tests/
+    - echo "测试阶段暂未实现，需要添加测试用例"
+    - exit 0  # 暂时跳过测试失败
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+# 构建Docker镜像
+build:
+  stage: build
+  needs: [test]
+  image: docker:29-cli
+  before_script:
+    - docker login -u admin -p password 172.16.1.11:80
+  script:
+    - docker build -t synapnote-landingpage -f Dockerfile .
+    - BUILD_TAG=$(date +%Y%m%d-%H%M%S)-${CI_COMMIT_SHORT_SHA}
+    - echo "构建标签 $BUILD_TAG"
+    - docker tag synapnote-landingpage 172.16.1.11:80/library/synapnote-landingpage:latest
+    - docker tag synapnote-landingpage 172.16.1.11:80/library/synapnote-landingpage:$BUILD_TAG
+    - docker push 172.16.1.11:80/library/synapnote-landingpage:latest
+    - docker push 172.16.1.11:80/library/synapnote-landingpage:$BUILD_TAG
+    - echo "BUILD_TAG=$BUILD_TAG" > build_tag.txt
+    - docker image prune -f
+  artifacts:
+    reports:
+      dotenv: build_tag.txt
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    #- if: $CI_COMMIT_BRANCH
+
+# 部署到测试环境（使用Docker Compose）
+deploy-test:
+  stage: deploy
+  needs: [build]
+  image: docker:29-cli
+  before_script:
+    - apk add --no-cache openssh-client
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_TEST" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 172.16.1.19 >> ~/.ssh/known_hosts || echo "警告:ssh-keyscan 失败，但将继续执行（已设置 StrictHostKeyChecking=no）"
+    - docker login -u admin -p password 172.16.1.11:80
+    - |
+      echo "根据 env.example 模板生成 .env 文件..."
+      if [ -f env.example ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+          if [ -n "$line" ] && [ "$(echo "$line" | cut -c1)" != "#" ]; then
+            key=$(echo "$line" | cut -d'=' -f1)
+            placeholder=$(echo "$line" | cut -d'=' -f2-)
+            if [ -n "$key" ] && [ -n "$placeholder" ]; then
+              var_name="${key}_TEST"
+              eval "var_value=\$$var_name"
+              if [ -n "$var_value" ]; then
+                echo "${key}=${var_value}"
+              else
+                echo "警告: 环境变量 $var_name 未设置，使用占位符 $placeholder" >&2
+                echo "${key}=${placeholder}"
+              fi
+            else
+              echo "$line"
+            fi
+          else
+            echo "$line"
+          fi
+        done < env.example > .env
+        echo ".env 文件已生成"
+      else
+        echo "错误: env.example 文件不存在"
+        exit 1
+      fi
+  script:
+    - echo "部署到测试环境 (172.16.1.19)..."
+    - ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no dev@172.16.1.19 "mkdir -p /home/dev/gitlabci/synapnote-landingpage"
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no docker-compose.yml dev@172.16.1.19:/home/dev/gitlabci/synapnote-landingpage/docker-compose.yml
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no .env dev@172.16.1.19:/home/dev/gitlabci/synapnote-landingpage/.env
+    - |
+      ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no dev@172.16.1.19 << 'EOF'
+        cd /home/dev/gitlabci/synapnote-landingpage
+        docker login -u admin -p password 172.16.1.11:80
+        docker pull 172.16.1.11:80/library/synapnote-landingpage:latest
+        docker tag 172.16.1.11:80/library/synapnote-landingpage:latest synapnote-landingpage:latest
+        if [ -f docker-compose.yml ]; then
+          docker compose down --remove-orphans
+        fi
+        docker compose up -d
+        sleep 5
+        docker compose ps
+        echo "测试环境部署完成！"
+      EOF
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    #- if: $CI_COMMIT_BRANCH
+
+# 部署到生产环境（使用Docker Compose）
+deploy-prod:
+  stage: deploy
+  needs: [build]
+  image: docker:29-cli
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_PROD" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 3.25.121.26 >> ~/.ssh/known_hosts || echo "警告:ssh-keyscan 失败，但将继续执行（已设置 StrictHostKeyChecking=no）"
+    - docker login -u admin -p password 172.16.1.11:80
+    - |
+      if [ -z "$BUILD_TAG" ]; then
+        BUILD_TAG=$(date +%Y%m%d-%H%M%S)-${CI_COMMIT_SHORT_SHA}
+        echo "未找到 BUILD_TAG，使用当前时间戳: $BUILD_TAG"
+      fi
+    - |
+      echo "根据 env.example 模板生成 .env 文件..."
+      if [ -f env.example ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+          if [ -n "$line" ] && [ "$(echo "$line" | cut -c1)" != "#" ]; then
+            key=$(echo "$line" | cut -d'=' -f1)
+            placeholder=$(echo "$line" | cut -d'=' -f2-)
+            if [ -n "$key" ] && [ -n "$placeholder" ]; then
+              var_name="${key}_PROD"
+              eval "var_value=\$$var_name"
+              if [ -n "$var_value" ]; then
+                echo "${key}=${var_value}"
+              else
+                echo "警告: 环境变量 $var_name 未设置，使用占位符 $placeholder" >&2
+                echo "${key}=${placeholder}"
+              fi
+            else
+              echo "$line"
+            fi
+          else
+            echo "$line"
+          fi
+        done < env.example > .env
+        echo ".env 文件已生成"
+        cp .env "env_${BUILD_TAG}.env"
+        echo "环境变量快照已保存: env_${BUILD_TAG}.env"
+      else
+        echo "错误: env.example 文件不存在"
+        exit 1
+      fi
+    - docker pull 172.16.1.11:80/library/synapnote-landingpage:latest
+    - docker tag 172.16.1.11:80/library/synapnote-landingpage:latest synapnote-landingpage:latest
+    - docker save synapnote-landingpage:latest -o synapnote-landingpage.tar
+    - docker rmi 172.16.1.11:80/library/synapnote-landingpage:latest
+  script:
+    - echo "部署到生产环境 (3.25.121.26)，版本:$BUILD_TAG"
+    - ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "mkdir -p /home/ubuntu/gitlabci/synapnote-landingpage"
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no docker-compose-prod.yml ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/docker-compose-prod.yml
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no .env ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/.env
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no "env_${BUILD_TAG}.env" ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/"env_${BUILD_TAG}.env"
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no synapnote-landingpage.tar ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/synapnote-landingpage.tar
+    - |
+      ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 << EOF
+        cd /home/ubuntu/gitlabci/synapnote-landingpage
+        docker load -i synapnote-landingpage.tar
+        rm -f synapnote-landingpage.tar
+        if [ -f docker-compose-prod.yml ]; then
+          docker compose -f docker-compose-prod.yml down --remove-orphans
+        fi
+        docker compose -f docker-compose-prod.yml up -d
+        sleep 5
+        docker compose ps
+        echo "$BUILD_TAG" > current_version.txt
+        echo "$(date +%Y-%m-%d\ %H:%M:%S) - $BUILD_TAG" >> version_history.txt
+        echo "生产环境部署完成！当前版本: $BUILD_TAG"
+      EOF
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    #- if: $CI_COMMIT_BRANCH
+      when: manual
+
+# 回滚生产环境
+rollback-prod:
+  stage: rollback
+  allow_failure: true
+  image: docker:29-cli
+  before_script:
+    - |
+      if [ -z "$ROLLBACK_TAG" ]; then
+        export ROLLBACK_TAG="previous"
+        echo "ROLLBACK_TAG 未设置，使用默认值: previous"
+      else
+        export ROLLBACK_TAG="$ROLLBACK_TAG"
+      fi
+    - apk add --no-cache openssh-client curl jq
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY_PROD" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H 3.25.121.26 >> ~/.ssh/known_hosts || echo "警告:ssh-keyscan 失败，但将继续执行（已设置 StrictHostKeyChecking=no）"
+    - docker login -u admin -p password 172.16.1.11:80
+    - |
+      if [ "$ROLLBACK_TAG" = "previous" ]; then
+        echo "尝试从服务器读取版本信息..."
+        CURRENT_VERSION=$(ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "cat /home/ubuntu/gitlabci/synapnote-landingpage/current_version.txt 2>/dev/null" || echo "")
+        VERSION_HISTORY=$(ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "cat /home/ubuntu/gitlabci/synapnote-landingpage/version_history.txt 2>/dev/null" || echo "")
+        
+        if [ -n "$CURRENT_VERSION" ]; then
+          echo "=========================================="
+          echo "当前生产环境版本: $CURRENT_VERSION"
+          echo "=========================================="
+          if [ -n "$VERSION_HISTORY" ]; then
+            echo ""
+            echo "最近部署历史:"
+            echo "$VERSION_HISTORY" | tail -n 10
+            echo ""
+          fi
+          
+          if [ -n "$VERSION_HISTORY" ]; then
+            PREVIOUS_VERSION=""
+            REVERSED_HISTORY=$(echo "$VERSION_HISTORY" | awk '{a[i++]=$0} END {for (j=i-1; j>=0;) print a[--j]}')
+            while IFS= read -r line; do
+              if [[ "$line" != *"回滚"* ]] && [[ "$line" == *" - "* ]]; then
+                VERSION=$(echo "$line" | awk -F' - ' '{print $2}' | sed 's/ (回滚)//' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+                if [ -n "$VERSION" ] && [ "$VERSION" != "$CURRENT_VERSION" ]; then
+                  PREVIOUS_VERSION="$VERSION"
+                  break
+                fi
+              fi
+            done < <(echo "$REVERSED_HISTORY")
+            if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ]; then
+              export ROLLBACK_TAG="$PREVIOUS_VERSION"
+              echo "自动选择上一个版本: $ROLLBACK_TAG"
+            else
+              echo ""
+              echo "错误: 未找到有效的上一个版本"
+              echo "当前版本: $CURRENT_VERSION"
+              echo "版本历史:"
+              echo "$VERSION_HISTORY" | tail -n 5
+              echo ""
+              echo "提示: 版本历史中只有当前版本，无法自动回滚到上一个版本"
+              echo "请手动设置 ROLLBACK_TAG 变量指定要回滚的版本号"
+              echo "例如: ROLLBACK_TAG=20240115-143022-abc1234"
+              exit 1
+            fi
+          else
+            echo "错误: 未找到版本历史文件"
+            exit 1
+          fi
+        else
+          echo "无法从服务器读取版本信息"
+          echo "错误: 请手动设置 ROLLBACK_TAG 变量指定要回滚的版本"
+          echo "例如: ROLLBACK_TAG=20240115-143022-abc1234"
+          exit 1
+        fi
+      else
+        echo "使用指定的回滚版本: $ROLLBACK_TAG"
+      fi
+      echo ""
+      echo "准备回滚到版本: $ROLLBACK_TAG"
+    - |
+      echo "检查环境变量快照文件..."
+      ENV_SNAPSHOT_EXISTS=$(ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "test -f /home/ubuntu/gitlabci/synapnote-landingpage/env_${ROLLBACK_TAG}.env && echo 'yes' || echo 'no'")
+      if [ "$ENV_SNAPSHOT_EXISTS" = "yes" ]; then
+        echo "找到环境变量快照文件 env_${ROLLBACK_TAG}.env，将使用该快照进行回滚"
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "cp /home/ubuntu/gitlabci/synapnote-landingpage/env_${ROLLBACK_TAG}.env /home/ubuntu/gitlabci/synapnote-landingpage/.env"
+        echo "环境变量快照已恢复"
+      else
+        echo "警告: 未找到环境变量快照文件 env_${ROLLBACK_TAG}.env"
+        echo "将使用当前的环境变量配置（基于 env.example 和 GitLab CI 变量）"
+        if [ -f env.example ]; then
+          while IFS= read -r line || [ -n "$line" ]; do
+            if [ -n "$line" ] && [ "$(echo "$line" | cut -c1)" != "#" ]; then
+              key=$(echo "$line" | cut -d'=' -f1)
+              placeholder=$(echo "$line" | cut -d'=' -f2-)
+              if [ -n "$key" ] && [ -n "$placeholder" ]; then
+                var_name="${key}_PROD"
+                eval "var_value=\$$var_name"
+                if [ -n "$var_value" ]; then
+                  echo "${key}=${var_value}"
+                else
+                  echo "警告: 环境变量 $var_name 未设置，使用占位符 $placeholder" >&2
+                  echo "${key}=${placeholder}"
+                fi
+              else
+                echo "$line"
+              fi
+            else
+              echo "$line"
+            fi
+          done < env.example > .env
+          echo ".env 文件已生成（使用当前配置）"
+          scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no .env ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/.env
+        else
+          echo "错误: env.example 文件不存在"
+          exit 1
+        fi
+      fi
+    - docker pull 172.16.1.11:80/library/synapnote-landingpage:$ROLLBACK_TAG || (echo "错误:无法拉取镜像 $ROLLBACK_TAG" && exit 1)
+    - docker tag 172.16.1.11:80/library/synapnote-landingpage:$ROLLBACK_TAG synapnote-landingpage:latest
+    - docker save synapnote-landingpage:latest -o synapnote-landingpage.tar
+    - docker rmi 172.16.1.11:80/library/synapnote-landingpage:$ROLLBACK_TAG
+  script:
+    - echo "回滚生产环境到版本:$ROLLBACK_TAG"
+    - ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 "mkdir -p /home/ubuntu/gitlabci/synapnote-landingpage"
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no docker-compose-prod.yml ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/docker-compose-prod.yml
+    - scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no synapnote-landingpage.tar ubuntu@3.25.121.26:/home/ubuntu/gitlabci/synapnote-landingpage/synapnote-landingpage.tar
+    - |
+      ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ubuntu@3.25.121.26 << EOF
+        cd /home/ubuntu/gitlabci/synapnote-landingpage
+        docker load -i synapnote-landingpage.tar
+        rm -f synapnote-landingpage.tar
+        if [ -f docker-compose-prod.yml ]; then
+          docker compose -f docker-compose-prod.yml down --remove-orphans
+        fi
+        docker compose -f docker-compose-prod.yml up -d
+        sleep 5
+        docker compose -f docker-compose-prod.yml ps
+        echo "$ROLLBACK_TAG" > current_version.txt
+        echo "$(date +%Y-%m-%d\ %H:%M:%S) - $ROLLBACK_TAG (回滚)" >> version_history.txt
+        echo "生产环境回滚完成！当前版本: $ROLLBACK_TAG"
+      EOF
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    #- if: $CI_COMMIT_BRANCH
+      when: manual
+
