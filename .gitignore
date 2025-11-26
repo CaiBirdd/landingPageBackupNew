@@ -1,0 +1,12 @@
+# 依赖文件
+/node_modules
+
+# Vite/构建工具生成的缓存
+.vite
+/dist
+/build
+
+# 日志及操作系统/编辑器文件
+*.log
+npm-debug.log*
+.DS_Store
