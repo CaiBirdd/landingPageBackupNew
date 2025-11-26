@@ -27,6 +27,7 @@ img, picture, video, canvas, svg {
 input, button, textarea, select {
   font: inherit;
   outline: none;
+  box-sizing: border-box;  /* 添加这行！ */
 }
 
 /* 移除列表默认样式 */

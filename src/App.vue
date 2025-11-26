@@ -1,11 +1,26 @@
 <template>
   <div>
-    <LandingPage />
+    <LandingPage v-if="!isMobile" />
+    <LandingPageMobile v-else />
   </div>
 </template>
 
 <script setup>
-import LandingPage from './views/landingPage.vue';
+import { ref, onMounted } from 'vue'
+import LandingPage from './views/landingPage.vue'
+import LandingPageMobile from './views/landingPageMobile.vue'
+
+const isMobile = ref(false)
+
+const detectDevice = () => {
+  const userAgent = navigator.userAgent.toLowerCase()
+  isMobile.value = /mobile|android|iphone|ipad|phone|blackberry|iemobile|wpdesktop/i.test(userAgent)
+}
+
+onMounted(() => {
+  detectDevice()
+  window.addEventListener('resize', detectDevice)
+})
 </script>
 
 <style>
@@ -16,6 +31,5 @@ import LandingPage from './views/landingPage.vue';
   /* text-align: center; */
   color: #2c3e50;
   /* margin-top: 60px; */
-  
 }
 </style>
