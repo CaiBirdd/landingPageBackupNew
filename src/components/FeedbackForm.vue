@@ -172,21 +172,21 @@ const recordUtmParams = async () => {
     const hasUtmParams = Object.keys(utmParams).length > 1
 
     if (!hasUtmParams) {
-      console.log('未检测到UTM参数，跳过记录')
+      //console.log('未检测到UTM参数，跳过记录')
       return
     }
 
     // 发送UTM参数到后端，获取session_id
     const res = await recordUtmParamsAPI(utmParams)
-    console.log(res, '发送post请求获取session_id')
+    //console.log(res, '发送post请求获取session_id')
     if (res.data?.session_id) {
       // 保存session_id到localStorage和表单数据中
       localStorage.setItem('session_id', res.data.session_id)
       formData.value.session_id = res.data.session_id
-      console.log('UTM参数已记录，session_id:', res.data.session_id)
+      //console.log('UTM参数已记录，session_id:', res.data.session_id)
     }
   } catch (error) {
-    console.error('记录UTM参数失败:', error)
+    //console.error('记录UTM参数失败:', error)
   }
 }
 
@@ -222,11 +222,11 @@ const sendData = async (data, submitType) => {
     // if (data.session_id) payload.session_id = data.session_id
     // 目前的data都是处理好的，不用再验空构建payload了
 
-    console.log('实际发送的数据:', data)
+    //console.log('实际发送的数据:', data)
 
     // 发送请求到后端
     const res = await createFeedbackAPI(data)
-    console.log(res, '发送post请求提交邮箱或反馈')
+    //console.log(res, '发送post请求提交邮箱或反馈')
 
     // ========== 处理成功响应 ==========
     if (res.status === 201) {
@@ -310,11 +310,11 @@ const handleEmailSubmit = () => {
     toast.warning("Please enter a valid email address.")
     return
   }
-  console.log('=== 邮箱提交 ===')
-  console.log('邮箱:', formData.value.email)
-  console.log('会话ID:', formData.value.session_id)
-  console.log('提交时间:', new Date().toLocaleString())
-  console.log('================')
+  //console.log('=== 邮箱提交 ===')
+  //console.log('邮箱:', formData.value.email)
+  //console.log('会话ID:', formData.value.session_id)
+  //console.log('提交时间:', new Date().toLocaleString())
+  //console.log('================')
 
   // 构建只包含email的数据
   const emailData = {
@@ -337,11 +337,11 @@ const handleContentSubmit = () => {
     return
   }
 
-  console.log('=== 反馈提交 ===')
-  console.log('反馈内容:', formData.value.content)
-  console.log('会话ID:', formData.value.session_id)
-  console.log('提交时间:', new Date().toLocaleString())
-  console.log('================')
+  //console.log('=== 反馈提交 ===')
+  //console.log('反馈内容:', formData.value.content)
+  //console.log('会话ID:', formData.value.session_id)
+  //console.log('提交时间:', new Date().toLocaleString())
+  //console.log('================')
 
   // 构建只包含content的数据
   const contentData = {
