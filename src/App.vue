@@ -6,21 +6,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import LandingPage from './views/landingPage.vue'
 import LandingPageMobile from './views/landingPageMobile.vue'
 
-const isMobile = ref(false)
 
 const detectDevice = () => {
   const userAgent = navigator.userAgent.toLowerCase()
-  isMobile.value = /mobile|android|iphone|ipad|phone|blackberry|iemobile|wpdesktop/i.test(userAgent)
+  return /mobile|android|iphone|ipad|phone|blackberry|iemobile|wpdesktop/i.test(userAgent)
 }
-
-onMounted(() => {
-  detectDevice()
-  window.addEventListener('resize', detectDevice)
-})
+const isMobile = ref(detectDevice())
+//修改pc和移动端的判断逻辑，去除响应式判断
+// onMounted(() => {
+//   window.addEventListener('resize', detectDevice)
+// })
 </script>
 
 <style>
