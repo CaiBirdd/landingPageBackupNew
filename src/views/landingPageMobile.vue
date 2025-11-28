@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,onBeforeUnmount } from 'vue'
 import { showToast, showSuccessToast, showFailToast } from 'vant'
 import 'vant/es/toast/style'
 import { createFeedbackAPI } from '../apis/createFeedback'
@@ -10,6 +10,26 @@ import { useFbPixel } from '../composables/useFbPixel'
 
 const { posthog } = usePostHog()
 const { trackLead } = useFbPixel()
+
+// --- REM 适配代码 ---
+const DESIGN_WIDTH = 440; // 设计稿基准宽度 (px)
+const ROOT_VALUE_AT_DESIGN_WIDTH = 44; // 对应 PostCSS 配置中的 rootValue
+
+const setRem = () => {
+  // 获取当前视口宽度，并限制最大宽度不超过设计稿宽度
+  const viewportWidth = Math.min(document.documentElement.clientWidth || document.body.clientWidth, DESIGN_WIDTH);
+  
+  // 新的计算公式：
+  // 根字体 = (当前视口宽度 / 设计稿宽度) * (设计稿下我们设置的 rootValue)
+  const rootFontSize = (viewportWidth / DESIGN_WIDTH) * ROOT_VALUE_AT_DESIGN_WIDTH;
+
+  // 将计算结果设置给 HTML 根元素
+  document.documentElement.style.fontSize = `${rootFontSize}px`;
+  
+  // 可以在控制台打印查看结果，例如在 440px 屏幕上，它应该是 44px
+  // console.log(`Viewport: ${viewportWidth}, Root Font Size: ${rootFontSize}px`);
+}
+
 
 //表单数据
 const formData = ref({
@@ -67,6 +87,9 @@ const recordUtmParams = async () => {
   }
 }
 onMounted(() => {
+   // 设置根字体大小
+  setRem()
+  window.addEventListener('resize', setRem) // 监听窗口变化，重新计算
   //从loacalStorage中恢复session_id针对用户从不带参数的官网直接访问的情况
   //这种情况目前看来不会发生了，都是测的带utm参数的，而且从代码层面看，下面的正常会覆盖这
   //其他代码部分的逻辑也都是从formData中获取的session_id，和这里关系不大了
@@ -77,6 +100,10 @@ onMounted(() => {
   //调用函数
   recordUtmParams()
 })
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', setRem) // 组件卸载时移除监听器，避免内存泄漏
+})
+
 
 const sendData = async (data, submitType) => {
   try {
@@ -261,32 +288,32 @@ const handleContentSubmit = () => {
       <div class="features-grid">
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--1.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Personalized strategies based on participants and past data.</p>
+          <p class="feature-text">Personalized strategies based on participants and past data.</p>
         </div>
 
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--2.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Track participant behavior and key signals during meetings.</p>
+          <p class="feature-text">Track participant behavior and key signals during meetings.</p>
         </div>
 
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--3.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Predict tough questions and get tailored responses.</p>
+          <p class="feature-text">Predict tough questions and get tailored responses.</p>
         </div>
 
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--4.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Get detailed post-meeting summaries.</p>
+          <p class="feature-text">Get detailed post-meeting summaries.</p>
         </div>
 
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--5.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Improve with each meeting.</p>
+          <p class="feature-text">Improve with each meeting.</p>
         </div>
 
         <div class="feature-card">
           <img src="../assets/ImageWithFallbackMobile--6.png" alt="feature" class="feature-img">
-          <p class="feature-text">· Prepare in just 5 minutes.</p>
+          <p class="feature-text">Prepare in just 5 minutes.</p>
         </div>
       </div>
     </section>
@@ -314,6 +341,7 @@ const handleContentSubmit = () => {
   max-width: 440px;
   margin: 0 auto;
   padding: 1px 10px calc(100vh - 650px); // 页面正常显示的重点 动态计算，适应不同设备
+  //padding: 1px 10px 40px;
   background: #FFF;
   font-family: Martel, serif;
   overflow-x: hidden;
@@ -362,13 +390,13 @@ const handleContentSubmit = () => {
 
     .subtitle {
       font-family: Martel;
-      font-size: 9px;
+      font-size: 9.5px;
       font-weight: 300;
       line-height: 1.375;
       letter-spacing: 1px;
       color: #000;
       margin-top: 20px;
-      padding: 0 30px;
+      padding: 0 20px;
     }
   }
 }
@@ -469,7 +497,7 @@ const handleContentSubmit = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10.9px;
+    gap: 9px;
     margin-bottom: 16.46px;
 
     .decorative-line {
@@ -483,8 +511,8 @@ const handleContentSubmit = () => {
       font-family: Martel;
       font-size: 13px;
       font-weight: 700;
-      line-height: 1.54;
-      letter-spacing: 1.5px;
+      line-height: 1.5;
+      letter-spacing: 1px;
       text-align: center;
       color: #000;
       margin: 0;
@@ -512,8 +540,8 @@ const handleContentSubmit = () => {
 
       .text {
         font-family: Martel;
-        font-size: 9px;
-        font-weight: 300;
+        font-size:10.2px;
+        font-weight: 400;
         line-height: 1.44;
         color: #000;
       }
@@ -571,7 +599,7 @@ const handleContentSubmit = () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 10px;
 
     .decorative-line {
       width: 21.3px;
@@ -585,7 +613,7 @@ const handleContentSubmit = () => {
       font-size: 13px;
       font-weight: 700;
       line-height: 1.5;
-      letter-spacing: 1.8px;
+      letter-spacing: 1px;
       text-align: center;
       color: #000;
       margin: 20px;
@@ -608,8 +636,8 @@ const handleContentSubmit = () => {
       min-height: 65px;
 
       .feature-img {
-        width: 37px;
-        height: 37px;
+        width: 39px;
+        height: 39px;
         border-radius: 5px;
         object-fit: cover;
         flex-shrink: 0;
@@ -617,7 +645,7 @@ const handleContentSubmit = () => {
 
       .feature-text {
         font-family: 'Martel';
-        font-size: 9px;
+        font-size: 9.5px;
         font-weight: 400;
         line-height: 1.41;
         color: #000;
