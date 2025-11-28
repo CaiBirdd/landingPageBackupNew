@@ -22,7 +22,16 @@ export default defineConfig({
           rootValue: 44, // 核心设置：设计稿宽度 440px / 10 = 44。这意味着 1rem = 10px 在 440px 视口下。
           unitPrecision: 5,
           propList: ['*'], // 转换所有 CSS 属性中的 px
-          selectorBlackList: ['ignore-'], // 忽略带有 'ignore-' 前缀的选择器
+          selectorBlackList: [
+            'ignore-',
+            'header-section',
+            'landing-content',
+            'email-section',
+            'features-section',
+            'feedback-section',
+            'feedback-container',
+            'Vue-Toastification'
+          ], // PC端组件和第三方库的class，不转换为rem
           replace: true,
           mediaQuery: false,
           minPixelValue: 1 // 小于等于 1px 的不转换，用于细线
