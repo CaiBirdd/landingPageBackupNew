@@ -24,12 +24,12 @@ export default defineConfig({
           propList: ['*'], // 转换所有 CSS 属性中的 px
           selectorBlackList: [
             'ignore-',
-            'header-section',
-            'landing-content',
-            'email-section',
-            'features-section',
-            'feedback-section',
-            'feedback-container',
+            'header-section-pc',
+            'landing-content-pc',
+            'email-section-pc',
+            'features-section-pc',
+            'feedback-section-pc',
+            'feedback-container-pc',
             'Vue-Toastification'
           ], // PC端组件和第三方库的class，不转换为rem
           replace: true,

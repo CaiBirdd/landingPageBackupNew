@@ -2,7 +2,7 @@
 </script>
 <template>
   <!-- 头部设计区域 -->
-  <header class="header-section">
+  <header class="header-section-pc">
     <!-- 最顶部logo 
       <div class="logo">
         <img src="../assets/logo.svg" alt="Synapnote Logo" class="logo-icon-img">
@@ -25,7 +25,7 @@
   </header>
 </template>
 <style lang="scss" scoped>
-.header-section {
+.header-section-pc {
   text-align: center;
   margin-top: 30px;
   margin-bottom: 50px;
@@ -102,7 +102,7 @@
 }
 
 @media (max-width: 1200px) {
-  .header-section {
+  .header-section-pc {
     padding: 0 40px;
     
     .main-title {
@@ -112,7 +112,7 @@
 }
 
 @media (max-width: 768px) {
-  .header-section {
+  .header-section-pc {
     padding: 0 20px;
     margin-bottom: 30px;
 
