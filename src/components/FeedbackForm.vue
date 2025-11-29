@@ -1,7 +1,7 @@
 <template>
-  <div class="landing-content">
+  <div class="landing-content-pc">
     <!-- 邮箱订阅区域 -->
-    <section class="email-section">
+    <section class="email-section-pc">
       <div class="email-container">
         <h2 class="email-title">Enter your email for early beta access!</h2>
         <form @submit.prevent="handleEmailSubmit" class="email-form" novalidate> 
@@ -15,7 +15,7 @@
     </section>
 
     <!-- 痛点和功能区域 -->
-    <section class="features-section">
+    <section class="features-section-pc">
       <!-- 在features-wrapper这里使用relative定位 后面的都是相对于他的-->
       <div class="features-wrapper">
         <!-- 白色功能卡片 -->
@@ -71,7 +71,7 @@
     </section>
 
     <!-- 建议区域 -->
-    <section class="feedback-section">
+    <section class="feedback-section-pc">
       <div class="feedback-header">
         <span class="optional-badge">Optional</span>
         <span class="feedback-prompt">Anything you'd like this product to do? Let us know!</span>
@@ -354,13 +354,13 @@ const handleContentSubmit = () => {
 </script>
 
 <style lang="scss" scoped>
-.landing-content {
+.landing-content-pc {
   max-width: 1440px;
   margin: 0 auto;
   padding: 0 80px;
 }
 
-.email-section {
+.email-section-pc {
   margin-bottom: 60px;
 
   .email-container {
@@ -452,7 +452,7 @@ const handleContentSubmit = () => {
   }
 }
 
-.features-section {
+.features-section-pc {
   margin-bottom: 80px;
 
   .features-wrapper {
@@ -718,7 +718,7 @@ const handleContentSubmit = () => {
   }
 }
 
-.feedback-section {
+.feedback-section-pc {
   margin-bottom: 60px;
 
   .feedback-header {
@@ -811,11 +811,11 @@ const handleContentSubmit = () => {
 }
 
 @media (max-width: 1200px) {
-  .landing-content {
+  .landing-content-pc{
     padding: 0 40px;
   }
 
-  .features-section .features-wrapper {
+  .features-section-pc .features-wrapper {
     transform: scale(0.85);
     transform-origin: top center;
     height: 440px;
@@ -823,11 +823,11 @@ const handleContentSubmit = () => {
 }
 
 @media (max-width: 768px) {
-  .landing-content {
+  .landing-content-pc{
     padding: 0 20px;
   }
 
-  .email-section {
+  .email-section-pc {
     margin-bottom: 40px;
 
     .email-container {
@@ -862,7 +862,7 @@ const handleContentSubmit = () => {
     }
   }
 
-  .features-section {
+  .features-section-pc {
     margin-bottom: 40px;
 
     .features-wrapper {
@@ -914,7 +914,7 @@ const handleContentSubmit = () => {
     }
   }
 
-  .feedback-section {
+  .feedback-section-pc {
     .feedback-header {
       flex-direction: column;
       align-items: flex-start;
