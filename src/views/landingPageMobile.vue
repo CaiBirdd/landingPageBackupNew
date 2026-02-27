@@ -11,24 +11,6 @@ import { useFbPixel } from '../composables/useFbPixel'
 const { posthog } = usePostHog()
 const { trackLead } = useFbPixel()
 
-// --- REM 适配代码 ---
-const DESIGN_WIDTH = 440; // 设计稿基准宽度 (px)
-const ROOT_VALUE_AT_DESIGN_WIDTH = 44; // 对应 PostCSS 配置中的 rootValue
-
-const setRem = () => {
-  // 获取当前视口宽度，并限制最大宽度不超过设计稿宽度
-  const viewportWidth = Math.min(document.documentElement.clientWidth || document.body.clientWidth, DESIGN_WIDTH);
-  
-  // 新的计算公式：
-  // 根字体 = (当前视口宽度 / 设计稿宽度) * (设计稿下我们设置的 rootValue)
-  const rootFontSize = (viewportWidth / DESIGN_WIDTH) * ROOT_VALUE_AT_DESIGN_WIDTH;
-
-  // 将计算结果设置给 HTML 根元素
-  document.documentElement.style.fontSize = `${rootFontSize}px`;
-  
-  // 可以在控制台打印查看结果，例如在 440px 屏幕上，它应该是 44px
-  // console.log(`Viewport: ${viewportWidth}, Root Font Size: ${rootFontSize}px`);
-}
 
 
 //表单数据
@@ -87,9 +69,6 @@ const recordUtmParams = async () => {
   }
 }
 onMounted(() => {
-   // 设置根字体大小
-  setRem()
-  window.addEventListener('resize', setRem) // 监听窗口变化，重新计算
   //从loacalStorage中恢复session_id针对用户从不带参数的官网直接访问的情况
   //这种情况目前看来不会发生了，都是测的带utm参数的，而且从代码层面看，下面的正常会覆盖这
   //其他代码部分的逻辑也都是从formData中获取的session_id，和这里关系不大了
@@ -100,9 +79,7 @@ onMounted(() => {
   //调用函数
   recordUtmParams()
 })
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', setRem) // 组件卸载时移除监听器，避免内存泄漏
-})
+
 
 
 const sendData = async (data, submitType) => {
