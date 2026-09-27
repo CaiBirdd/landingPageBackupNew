@@ -6,10 +6,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import LandingPage from './views/landingPage.vue'
-import LandingPageMobile from './views/landingPageMobile.vue'
+import { defineAsyncComponent, ref } from 'vue'
 
+const LandingPage = defineAsyncComponent(() => import('./views/landingPage.vue'))
+const LandingPageMobile = defineAsyncComponent(() => import('./views/landingPageMobile.vue'))
 
 const detectDevice = () => {
   const userAgent = navigator.userAgent.toLowerCase()
